@@ -194,6 +194,15 @@ Temporary Items/
 # 8) Project-specific (adjust as needed)
 # ──────────────────────────────────────────────────────────────────────────────
 
+# ML artifacts & dataset
+src/data/processed/artifacts/
+src/data/raw/onera-satellite-change-detection-dataset/
+onera-satellite-change-detection-dataset/
+*.keras
+*.h5
+training_results.json
+input/
+
 # luasrc (if you have a local Lua config)
 .luarc.json
 

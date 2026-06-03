@@ -1,0 +1,4 @@
+# Install into the active Conda environment instead of creating a .venv
+[virtualenvs]
+create = false
+in-project = false

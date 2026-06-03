@@ -1,0 +1,52 @@
+services:
+  ucdnet-cpu:
+    build: .
+    image: change-detection:latest
+    profiles: ["cpu"]
+    volumes:
+      - ./src/data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
+      - ./src/data/processed/artifacts:/app/src/data/processed/artifacts
+    environment:
+      UCDNET_DATA_ROOT: /data/oscd
+      UCDNET_OUTPUT_DIR: /app/src/data/processed/artifacts
+    command: ["train", "--epochs", "30"]
+
+  ucdnet-gpu:
+    build: .
+    image: change-detection:latest
+    profiles: ["gpu"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ./src/data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
+      - ./src/data/processed/artifacts:/app/src/data/processed/artifacts
+    environment:
+      UCDNET_DATA_ROOT: /data/oscd
+      UCDNET_OUTPUT_DIR: /app/src/data/processed/artifacts
+      NVIDIA_VISIBLE_DEVICES: all
+    command: ["train", "--epochs", "30"]
+
+  predict:
+    build: .
+    image: change-detection:latest
+    profiles: ["predict"]
+    volumes:
+      - ./src/data/processed/artifacts:/app/src/data/processed/artifacts
+      - ./input:/input:ro
+    environment:
+      UCDNET_OUTPUT_DIR: /app/src/data/processed/artifacts
+    entrypoint: ["ucdnet", "predict"]
+    command:
+      - "--model"
+      - "/app/src/data/processed/artifacts/best_model.keras"
+      - "--t1"
+      - "/input/t1"
+      - "--t2"
+      - "/input/t2"
+      - "--out"
+      - "/app/src/data/processed/artifacts/predictions/change_map.tif"

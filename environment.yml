@@ -1,0 +1,21 @@
+# Conda environment for UCDNet + Poetry
+#
+# Create and activate:
+#   conda env create -f environment.yml
+#   conda activate change-detection
+#
+# Then install Python deps with Poetry:
+#   poetry lock
+#   poetry install
+#
+# GPU (Linux, optional — after poetry install):
+#   pip install "tensorflow[and-cuda]>=2.15"
+
+name: change-detection
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - poetry>=1.8,<2.0
+  - gdal>=3.8
+  - pip
