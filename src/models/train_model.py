@@ -27,7 +27,7 @@ def _evaluate_patch_dataset(model, ds) -> dict[str, float]:
     for inputs, lbl in ds:
         preds = model.predict(inputs, verbose=0)
         y_true_all.append(lbl[..., 1].numpy().ravel())
-        y_pred_all.append(preds[..., 1].numpy().ravel())
+        y_pred_all.append(preds[..., 1].ravel())
     return compute_metrics(
         np.concatenate(y_true_all),
         np.concatenate(y_pred_all),

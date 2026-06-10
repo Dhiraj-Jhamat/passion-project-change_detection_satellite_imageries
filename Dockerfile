@@ -2,6 +2,8 @@
 # Requires: NVIDIA Container Toolkit for GPU (`docker compose --profile gpu up`)
 FROM tensorflow/tensorflow:2.15.0-gpu
 
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \

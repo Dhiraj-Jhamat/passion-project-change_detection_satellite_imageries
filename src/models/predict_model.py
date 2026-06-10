@@ -9,7 +9,7 @@ import tensorflow as tf
 from tqdm import tqdm
 
 from models.losses import make_loss
-from models.metrics import compute_metrics, print_metrics
+from models.metrics import changed_class_f1, changed_class_jaccard, compute_metrics, print_metrics
 from models.ucdnet_architecture import BilinearResize, build_ucdnet
 from preprocessing_data.oscd_loader import load_image_pair, load_label
 
@@ -22,6 +22,8 @@ def load_model(model_path: str | Path) -> tf.keras.Model:
             custom_objects={
                 "BilinearResize": BilinearResize,
                 "ucdnet_combined_loss": make_loss(),
+                "changed_class_f1": changed_class_f1,
+                "changed_class_jaccard": changed_class_jaccard,
             },
         )
 
