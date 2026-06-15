@@ -1,7 +1,6 @@
 """
 metrics.py — UCDNet Metrics
-============================
-Paper: UCDNet (Basavaraju et al., IEEE TGRS 2022)
+
 
 Two kinds of metrics are defined here:
 
@@ -20,7 +19,7 @@ import tensorflow as tf
 SMOOTH = 1e-6
 
 
-# ── 1. Keras (graph-mode) metrics ────────────────────────────────────────
+# 1. Keras (graph-mode) metrics 
 # These are passed to model.compile(metrics=[...]) in train_model.py
 
 def jaccard_index(y_true, y_pred, smooth=SMOOTH):
@@ -54,7 +53,7 @@ def f1_score(y_true, y_pred, smooth=SMOOTH):
     return 2.0 * pr * re / (pr + re + smooth)
 
 
-# ── 2. NumPy (test-time) metrics ──────────────────────────────────────────
+# 2. NumPy (test-time) metrics 
 # These operate on binarised (H, W) arrays after argmax.
 
 def compute_metrics(y_true_bin, y_pred_bin):

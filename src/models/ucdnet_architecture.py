@@ -1,7 +1,5 @@
 """
 ucdnet_architecture.py — UCDNet Model Architecture
-====================================================
-Paper: UCDNet (Basavaraju et al., IEEE TGRS 2022)
 
 Network layout:
   Encoder (4 stages, shared-weight siamese branches)
@@ -47,7 +45,7 @@ def _conv2x2(x, filters, name):
     return x
 
 
-# ── Encoder stages ────────────────────────────────────────────────────────
+#  Encoder stages 
 
 def _encoder_stage1(t1, t2):
     """
@@ -140,7 +138,7 @@ def _encoder_stage4(x1, x2):
     return layers.Concatenate(name="s4_enc_out")([r1, r2, diff_r])   # (B,H,W,192)
 
 
-# ── NSPP Block ────────────────────────────────────────────────────────────
+#  NSPP Block
 
 def _nspp_block(f_enc):
     """
@@ -221,7 +219,7 @@ def _nspp_block(f_enc):
     )(cat)
 
 
-# ── Decoder stages ────────────────────────────────────────────────────────
+#  Decoder stages
 
 def _decoder_stage1(x, skip1_s3, skip2_s3):
     """Decoder stage 1 — upsample × 2, concat stage-3 skips → 32 ch."""
@@ -255,7 +253,7 @@ def _decoder_stage3(x, skip1_s1, skip2_s1):
     return x
 
 
-# ── Public builder ────────────────────────────────────────────────────────
+#  Public builder 
 
 def build_ucdnet(input_shape=(512, 512, 13), num_classes=2):
     """
@@ -296,7 +294,7 @@ def build_ucdnet(input_shape=(512, 512, 13), num_classes=2):
     return Model(inputs=[T1, T2], outputs=output, name="UCDNet")
 
 
-# ── Quick smoke-test ──────────────────────────────────────────────────────
+#  Quick smoke-test 
 
 if __name__ == "__main__":
     import numpy as np

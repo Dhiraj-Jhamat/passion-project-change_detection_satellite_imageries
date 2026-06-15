@@ -1,7 +1,5 @@
 """
 oscd_loader.py — OSCD Dataset Loader for UCDNet
-================================================
-Paper: UCDNet (Basavaraju et al., IEEE TGRS 2022)
 
 Memory-efficient pipeline — patches are saved to disk as .npy files
 and loaded one-at-a-time during training via tf.data.  This avoids
@@ -23,23 +21,23 @@ import rasterio
 from rasterio.enums import Resampling
 import tensorflow as tf
 
-# ── Sentinel-2 band file names (13 bands) ─────────────────────────────────
+#  Sentinel-2 band file names (13 bands) 
 BAND_FILES = [
     "B01.tif", "B02.tif", "B03.tif", "B04.tif",
     "B05.tif", "B06.tif", "B07.tif", "B08.tif",
     "B8A.tif", "B09.tif", "B10.tif", "B11.tif", "B12.tif"
 ]
 
-# ── Patch parameters ───────────────────────────────────────────────────────
+#  Patch parameters
 PATCH_SIZE = 512
 STRIDE     = 64    # step between patch starts (= overlap amount per paper)
 
-# ── Disk cache directory ───────────────────────────────────────────────────
+#  Disk cache directory
 # Patches are stored here on first run and reused on subsequent runs.
 CACHE_DIR  = "patch_cache"
 
 
-# ── Low-level image helpers ───────────────────────────────────────────────
+#  Low-level image helpers
 
 def read_bands(city_dir, subdir="imgs_1_rect", target_h=None, target_w=None):
     """Read all 13 bands, resample to target size, normalise to [0,1]."""
@@ -95,7 +93,7 @@ def to_one_hot(label, num_classes=2):
     ).astype(np.float32)
 
 
-# ── Disk-cache helpers ────────────────────────────────────────────────────
+# Disk-cache helpers 
 
 def _patch_paths(idx, cache_dir=CACHE_DIR):
     """Return (t1_path, t2_path, y_path) for patch index idx."""
@@ -165,7 +163,7 @@ def build_patch_cache(images_root, labels_root, all_cities,
     return patch_idx
 
 
-# ── Main split function ───────────────────────────────────────────────────
+# Main split function 
 
 def get_split_paths(images_root, labels_root, all_cities,
                     n_train=200, n_val=57, n_test=30,
@@ -204,7 +202,7 @@ def get_split_paths(images_root, labels_root, all_cities,
     return to_paths(tr_idx), to_paths(vl_idx), to_paths(te_idx)
 
 
-# ── tf.data pipeline ──────────────────────────────────────────────────────
+# tf.data pipeline 
 
 def make_dataset(path_tuples, batch_size=1, shuffle=False):
     """

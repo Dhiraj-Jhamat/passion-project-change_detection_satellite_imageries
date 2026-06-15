@@ -1,7 +1,5 @@
 """
 losses.py — UCDNet Loss Function
-=================================
-Paper: UCDNet (Basavaraju et al., IEEE TGRS 2022)
 
 Loss = WCCE + k_weight * L_modified_kappa   (Eq. 13–17)
 
@@ -16,7 +14,7 @@ Components:
 
 import tensorflow as tf
 
-# ── Module-level constants ────────────────────────────────────────────────
+# Module-level constants 
 K_WEIGHT_MAX = 2.0   # clip ceiling for k_weight (prevents instability)
 
 # Warmup scalar: starts at 0, ramped to 1 by KappaWarmup callback.

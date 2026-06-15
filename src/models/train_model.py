@@ -1,7 +1,5 @@
 """
 train_model.py — Train UCDNet on the OSCD dataset
-==================================================
-Paper: UCDNet (Basavaraju et al., IEEE TGRS 2022)
 
 Memory-efficient: patches are loaded one-at-a-time from disk via tf.data.
 No full dataset is held in RAM at any point.
@@ -34,9 +32,8 @@ from src.models.losses import ucdnet_loss, k_warmup
 from src.models.metrics import jaccard_index, f1_score
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # CALLBACKS
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 def get_callbacks():
     return [
@@ -74,9 +71,9 @@ class KappaWarmup(tf.keras.callbacks.Callback):
         print(f"  k_warmup = {w:.2f}")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # PLOT CURVES  (paper Fig. 6 + all tracked metrics)
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 def plot_curves(history):
     h = history.history
@@ -120,9 +117,9 @@ def plot_curves(history):
     print(f"  Curves saved → {CURVES_PATH}")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # MAIN
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 def main():
     print("=" * 60)
@@ -134,7 +131,7 @@ def main():
     print(f"  Class weights : {CLASS_WEIGHTS}")
     print(f"  Patch split   : {N_TRAIN_PATCHES} / {N_VAL_PATCHES} / {N_TEST_PATCHES}")
 
-    # ── Step 1: build (or reuse) disk cache, get file-path splits ─────────
+    # Step 1: build (or reuse) disk cache, get file-path splits 
     print("\n[1/4] Preparing patch file paths ...")
     tr_paths, vl_paths, te_paths = get_split_paths(
         images_root=IMAGES_ROOT,
@@ -146,12 +143,12 @@ def main():
     )
     print(f"  Train: {len(tr_paths)} | Val: {len(vl_paths)} | Test: {len(te_paths)}")
 
-    # ── Step 2: tf.data pipelines (load from disk on demand) ──────────────
+    # Step 2 tf.data pipelines (load from disk on demand) 
     print("\n[2/4] Building tf.data pipelines ...")
     train_ds = make_dataset(tr_paths, batch_size=BATCH_SIZE, shuffle=True)
     val_ds   = make_dataset(vl_paths, batch_size=BATCH_SIZE, shuffle=False)
 
-    # ── Step 3: build and compile model ───────────────────────────────────
+    # Step 3: build and compile model
     print("\n[3/4] Building model ...")
     model = build_ucdnet(input_shape=INPUT_SHAPE, num_classes=NUM_CLASSES)
     model.compile(
@@ -167,7 +164,7 @@ def main():
     )
     model.summary()
 
-    # ── Step 4: train ─────────────────────────────────────────────────────
+    # Step 4 train 
     print("\n[4/4] Training ...")
     history = model.fit(
         train_ds,
@@ -186,3 +183,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

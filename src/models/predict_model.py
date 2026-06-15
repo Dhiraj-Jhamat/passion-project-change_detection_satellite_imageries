@@ -42,9 +42,9 @@ from src.models.metrics import compute_metrics, average_metrics
 TEST_METRICS_PATH = os.path.join(os.path.dirname(CHECKPOINT_PATH), "test_metrics.csv")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # VISUALISATION
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 def to_rgb(patch_13band):
     """
@@ -126,17 +126,14 @@ def save_summary_figure(all_metrics, out_path):
     plt.close()
     print(f"  Summary figure saved → {out_path}")
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # MAIN
-# ─────────────────────────────────────────────────────────────────────────────
 
 def main():
     print("=" * 60)
     print("  UCDNet Testing")
     print("=" * 60)
 
-    # ── Step 1: load the same patch split as training ──────────────────────
+    #Step 1 load the same patch split as training 
     print("\n[1/4] Loading test patch paths ...")
     _, _, te_paths = get_split_paths(
         images_root=IMAGES_ROOT,
@@ -148,20 +145,16 @@ def main():
     )
     print(f"  Test patches : {len(te_paths)}")
 
-    # ── Step 2: load model ─────────────────────────────────────────────────
+    # Step 2 load model
     print(f"\n[2/4] Loading model from {CHECKPOINT_PATH} ...")
     assert os.path.exists(CHECKPOINT_PATH), (
         f"Model not found at {CHECKPOINT_PATH}. Run train_model.py first."
     )
-    # Build fresh model and load weights only.
-    # Avoids Keras trying to deserialise custom metric functions
-    # (jaccard_index, f1_score) that are not registered with
-    # @keras.saving.register_keras_serializable().
     model = build_ucdnet(input_shape=INPUT_SHAPE, num_classes=NUM_CLASSES)
     model.load_weights(CHECKPOINT_PATH)
     print("  Model loaded (weights only).")
 
-    # ── Step 3: run inference patch by patch ──────────────────────────────
+    #  Step 3 run inference patch by patch
     print("\n[3/4] Running inference on test patches ...")
     os.makedirs(PREDICTIONS_DIR, exist_ok=True)
 
@@ -204,7 +197,7 @@ def main():
                      "t1_path": t1_path, "t2_path": t2_path,
                      **{k: f"{v:.6f}" for k, v in m.items()}})
 
-    # ── Step 4: aggregate and report ──────────────────────────────────────
+    # Step 4 aggregate and report 
     print("\n[4/4] Aggregating results ...")
     avg = average_metrics(all_metrics)
 
