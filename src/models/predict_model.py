@@ -21,6 +21,8 @@ Run (from project root):
 
 import os
 import csv
+from pathlib import Path
+
 import numpy as np
 import matplotlib
 
@@ -45,6 +47,112 @@ from src.models.ucdnet_architecture import build_ucdnet
 from src.models.metrics import compute_metrics, average_metrics
 
 TEST_METRICS_PATH = os.path.join(os.path.dirname(CHECKPOINT_PATH), "test_metrics.csv")
+
+
+# ── Public API (used by streamlit_app & main.py) ──────────────────────────
+
+
+def load_model(model_path):
+    """Build UCDNet and load trained weights."""
+    model = build_ucdnet(input_shape=INPUT_SHAPE, num_classes=NUM_CLASSES)
+    model.load_weights(model_path)
+    return model
+
+
+def predict_sliding_window(model, img1, img2, patch_size=512, overlap=64, batch_size=4):
+    """
+    Run sliding-window inference over a full-resolution image pair.
+
+    Returns a 2D probability map (H, W) float32 in [0, 1].
+    """
+    H, W = img1.shape[:2]
+    stride = patch_size - overlap
+
+    # Collect patches
+    patches_t1, patches_t2, positions = [], [], []
+    for y in range(0, H, stride):
+        for x in range(0, W, stride):
+            y1 = min(y, H - patch_size) if y + patch_size > H else y
+            x1 = min(x, W - patch_size) if x + patch_size > W else x
+            patches_t1.append(img1[y1:y1 + patch_size, x1:x1 + patch_size])
+            patches_t2.append(img2[y1:y1 + patch_size, x1:x1 + patch_size])
+            positions.append((y1, x1))
+
+    prob_map = np.zeros((H, W), dtype=np.float32)
+    count_map = np.zeros((H, W), dtype=np.float32)
+
+    for i in range(0, len(patches_t1), batch_size):
+        batch_t1 = np.stack(patches_t1[i:i + batch_size], axis=0)
+        batch_t2 = np.stack(patches_t2[i:i + batch_size], axis=0)
+        preds = model.predict({"T1": batch_t1, "T2": batch_t2}, verbose=0)
+        for j, (y1, x1) in enumerate(positions[i:i + batch_size]):
+            prob = preds[j][..., 1]
+            prob_map[y1:y1 + patch_size, x1:x1 + patch_size] += prob
+            count_map[y1:y1 + patch_size, x1:x1 + patch_size] += 1.0
+
+    prob_map = np.divide(prob_map, count_map, where=count_map > 0)
+    return prob_map
+
+
+def save_outputs(out_path, prob_map, change_map, reference_tif=None):
+    """Save probability map and binary change map to disk."""
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        import rasterio
+        from rasterio.profiles import DefaultGTiffProfile
+
+        if reference_tif and Path(reference_tif).is_file():
+            with rasterio.open(reference_tif) as src:
+                profile = src.profile.copy()
+        else:
+            profile = DefaultGTiffProfile()
+            profile.update(height=change_map.shape[0], width=change_map.shape[1], count=1)
+
+        prob_path = out_path.with_suffix(".prob.tif")
+        prof_float = dict(profile, dtype=rasterio.float32)
+        with rasterio.open(prob_path, "w", **prof_float) as dst:
+            dst.write(prob_map, 1)
+
+        prof_uint8 = dict(profile, dtype=rasterio.uint8)
+        with rasterio.open(out_path, "w", **prof_uint8) as dst:
+            dst.write(change_map, 1)
+    except Exception:
+        png_path = out_path.with_suffix(".png")
+        plt.imsave(str(png_path), change_map, cmap="RdYlBu_r", vmin=0, vmax=1)
+        prob_png = png_path.with_suffix(".prob.png")
+        plt.imsave(str(prob_png), prob_map, cmap="RdYlBu_r", vmin=0, vmax=1)
+
+
+def predict_pair(
+    model_path,
+    t1_path,
+    t2_path,
+    out_path,
+    label_path=None,
+    patch_size=512,
+    overlap=64,
+    batch_size=4,
+    threshold=0.5,
+    normalize="reflectance",
+):
+    """Full inference pipeline: load model + images, run, save, return metrics."""
+    from src.preprocessing_data.oscd_loader import load_image_pair, load_label
+
+    model = load_model(model_path)
+    img1, img2 = load_image_pair(t1_path, t2_path, normalize=normalize)
+    prob_map = predict_sliding_window(model, img1, img2, patch_size, overlap, batch_size)
+    change_map = (prob_map >= threshold).astype(np.uint8)
+    save_outputs(Path(out_path), prob_map, change_map, reference_tif=t1_path)
+
+    metrics = {}
+    if label_path and Path(label_path).is_file():
+        label = load_label(label_path, target_shape=img1.shape[:2])
+        from .metrics import compute_metrics
+        metrics = compute_metrics(label.ravel(), change_map.ravel())
+
+    return metrics
 
 
 # VISUALISATION

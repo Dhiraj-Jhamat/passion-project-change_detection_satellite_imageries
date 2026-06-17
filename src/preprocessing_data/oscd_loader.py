@@ -16,11 +16,18 @@ Usage:
 """
 
 import os
+from pathlib import Path
 
 import numpy as np
 import rasterio
 import tensorflow as tf
+from PIL import Image as PILImage
 from rasterio.enums import Resampling
+
+try:
+    _PIL_RESAMPLE = PILImage.Resampling.BILINEAR
+except AttributeError:
+    _PIL_RESAMPLE = PILImage.BILINEAR
 
 #  Sentinel-2 band file names (13 bands)
 BAND_FILES = [
@@ -224,6 +231,126 @@ def get_split_paths(
 
 
 # tf.data pipeline
+
+
+# ── Inference I/O (used by streamlit_app) ────────────────────────────────
+
+S2_BANDS = [
+    "B01", "B02", "B03", "B04", "B05", "B06",
+    "B07", "B08", "B8A", "B09", "B10", "B11", "B12",
+]
+
+
+def normalize_reflectance(img):
+    return np.clip(img, 0, 10000).astype(np.float32) / 10000.0
+
+
+def normalize_per_band(img):
+    mn = img.min(axis=(0, 1), keepdims=True)
+    mx = img.max(axis=(0, 1), keepdims=True)
+    denom = np.where(mx - mn == 0, 1.0, mx - mn)
+    return ((img - mn) / denom).astype(np.float32)
+
+
+def _load_tif(path):
+    try:
+        with rasterio.open(path) as src:
+            arr = src.read()
+        return arr.transpose(1, 2, 0).astype(np.float32)
+    except Exception:
+        pass
+    arr = np.array(PILImage.open(path)).astype(np.float32)
+    if arr.ndim == 2:
+        arr = arr[:, :, np.newaxis]
+    return arr
+
+
+def _resize_to(img, h, w):
+    out = []
+    for c in range(img.shape[2]):
+        ch = PILImage.fromarray(img[:, :, c]).resize((w, h), _PIL_RESAMPLE)
+        out.append(np.array(ch, dtype=np.float32))
+    return np.stack(out, axis=2)
+
+
+def _load_from_path(path, num_bands=13):
+    path = Path(path)
+    if path.is_file():
+        img = _load_tif(str(path))
+        if img.shape[2] < num_bands:
+            raise FileNotFoundError(f"{path} has {img.shape[2]} bands, need {num_bands}")
+        return img[:, :, :num_bands]
+
+    tifs = list(path.glob("*.tif")) + list(path.glob("*.TIF")) + list(path.glob("*.tiff"))
+    found = {}
+    for p in tifs:
+        stem = p.stem.upper()
+        for band in S2_BANDS:
+            if stem == band.upper() or band.upper() in stem:
+                found[band] = p
+                break
+
+    if len(found) >= num_bands:
+        arrays = [_load_tif(str(found[b]))[:, :, 0] for b in S2_BANDS[:num_bands]]
+        ref_h, ref_w = arrays[1].shape
+        resized = []
+        for arr in arrays:
+            if arr.shape != (ref_h, ref_w):
+                arr = np.array(
+                    PILImage.fromarray(arr).resize((ref_w, ref_h), _PIL_RESAMPLE),
+                    dtype=np.float32,
+                )
+            resized.append(arr)
+        return np.stack(resized, axis=2).astype(np.float32)
+
+    for p in tifs:
+        try:
+            img = _load_tif(str(p))
+            if img.shape[2] >= num_bands:
+                return img[:, :, :num_bands]
+        except Exception:
+            continue
+
+    raise FileNotFoundError(
+        f"Could not load {num_bands} bands from {path}. "
+        f"Provide per-band TIFs (B01.tif … B12.tif) or one stacked GeoTIFF."
+    )
+
+
+def load_image_pair(t1_path, t2_path, num_bands=13, normalize="reflectance"):
+    """Load a bi-temporal image pair for inference."""
+    img1 = _load_from_path(t1_path, num_bands)
+    img2 = _load_from_path(t2_path, num_bands)
+
+    h, w = img1.shape[:2]
+    if img2.shape[:2] != (h, w):
+        img2 = _resize_to(img2, h, w)
+
+    if normalize == "per_band":
+        img1 = normalize_per_band(img1)
+        img2 = normalize_per_band(img2)
+    else:
+        img1 = normalize_reflectance(img1)
+        img2 = normalize_reflectance(img2)
+
+    return img1, img2
+
+
+def load_label(path, target_shape=None):
+    """Load a change-map label, remap OSCD values → 0/1."""
+    path = Path(path)
+    try:
+        with rasterio.open(path) as src:
+            lbl = src.read(1)
+        lbl = np.where(lbl == 2, 1, np.where(lbl > 0, 1, 0)).astype(np.uint8)
+    except Exception:
+        lbl = (np.array(PILImage.open(path)) > 0).astype(np.uint8)
+
+    if target_shape and lbl.shape != target_shape:
+        h, w = target_shape
+        lbl = np.array(PILImage.fromarray(lbl).resize((w, h), _PIL_RESAMPLE)) > 0
+        lbl = lbl.astype(np.uint8)
+    return lbl
 
 
 def make_dataset(path_tuples, batch_size=1, shuffle=False):
