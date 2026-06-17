@@ -33,7 +33,7 @@ def render_sidebar():
             model_input = st.text_input(
                 "Model path",
                 value=st.session_state.get("model_path") or "",
-                placeholder="src/data/processed/artifacts/best_model.keras",
+                placeholder="data/processed/artifacts/best_model.keras",
             )
             if model_input and Path(model_input).is_file():
                 st.session_state["model_path"] = model_input
@@ -47,7 +47,7 @@ def render_sidebar():
         st.markdown("### 📁 Output")
         out_dir = st.text_input(
             "Output directory",
-            value=st.session_state.get("output_dir", "src/data/processed/artifacts"),
+            value=st.session_state.get("output_dir", "data/processed/artifacts"),
         )
         st.session_state["output_dir"] = out_dir
 
@@ -55,12 +55,17 @@ def render_sidebar():
         st.markdown("### 📊 Session")
 
         s = st.session_state
-        st.write(f"- T1: `{Path(s.t1_path).name if s.t1_path else '—'}`")
-        st.write(f"- T2: `{Path(s.t2_path).name if s.t2_path else '—'}`")
-        st.write(f"- Model: `{Path(s.model_path).name if s.model_path else '—'}`")
-        st.write(f"- Prediction: {'done ✅' if s.change_map is not None else '—'}")
-        if s.metrics:
-            st.write(f"- F1: `{s.metrics.get('f1', 0)*100:.1f}%`")
+        t1_path = s.get("t1_path")
+        t2_path = s.get("t2_path")
+        model_path = s.get("model_path")
+        change_map = s.get("change_map")
+        metrics = s.get("metrics")
+        st.write(f"- T1: `{Path(t1_path).name if t1_path else '—'}`")
+        st.write(f"- T2: `{Path(t2_path).name if t2_path else '—'}`")
+        st.write(f"- Model: `{Path(model_path).name if model_path else '—'}`")
+        st.write(f"- Prediction: {'done ✅' if change_map is not None else '—'}")
+        if metrics:
+            st.write(f"- F1: `{metrics.get('f1', 0)*100:.1f}%`")
 
         st.divider()
         if st.button("🗑️ Clear session", use_container_width=True):

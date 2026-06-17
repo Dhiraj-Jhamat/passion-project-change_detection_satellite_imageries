@@ -11,16 +11,16 @@ st.set_page_config(
 
 # ── Session state defaults ──────────────────────────────────────────────────
 defaults = {
-    "t1_path": None,          # Path to T1 image folder or file
-    "t2_path": None,          # Path to T2 image folder or file
-    "model_path": None,       # Path to best_model.keras
-    "label_path": None,       # Optional ground-truth label
-    "prob_map": None,         # np.ndarray from predict_pair
-    "change_map": None,       # np.ndarray binary
-    "metrics": {},            # dict from compute_metrics
-    "train_history": None,    # Keras History object after training
-    "settings": None,         # Settings dataclass instance
-    "output_dir": "src/data/processed/artifacts",
+    "t1_path": None,  # Path to T1 image folder or file
+    "t2_path": None,  # Path to T2 image folder or file
+    "model_path": None,  # Path to best_model.keras
+    "label_path": None,  # Optional ground-truth label
+    "prob_map": None,  # np.ndarray from predict_pair
+    "change_map": None,  # np.ndarray binary
+    "metrics": {},  # dict from compute_metrics
+    "train_history": None,  # Keras History object after training
+    "settings": None,  # Settings dataclass instance
+    "output_dir": "data/processed/artifacts",
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -28,6 +28,7 @@ for k, v in defaults.items():
 
 # ── Sidebar ─────────────────────────────────────────────────────────────────
 from components.sidebar import render_sidebar
+
 render_sidebar()
 
 # ── Landing page ─────────────────────────────────────────────────────────────

@@ -21,12 +21,12 @@ ensure_src_on_path()
 
 data_root = st.text_input(
     "OSCD data root",
-    placeholder="src/data/raw/onera-satellite-change-detection-dataset",
+    placeholder="data/raw/onera-satellite-change-detection-dataset",
     help="Folder containing `images/` and `train_labels/` subdirectories.",
 )
 output_dir = st.text_input(
     "Output directory",
-    value=st.session_state.get("output_dir", "src/data/processed/artifacts"),
+    value=st.session_state.get("output_dir", "data/processed/artifacts"),
     help="Where model checkpoints, metrics, and curves will be saved.",
 )
 

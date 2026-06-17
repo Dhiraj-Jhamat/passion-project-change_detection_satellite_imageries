@@ -2,7 +2,7 @@
 Load and pre-process OSCD bi-temporal Sentinel-2 imagery (assignment entry script).
 
 Run from project root:
-  python src/preprocessing_data/pre-processing.py --data-root src/data/raw/onera-satellite-change-detection-dataset
+  python src/preprocessing_data/pre-processing.py --data-root data/raw/onera-satellite-change-detection-dataset
 """
 
 from __future__ import annotations

@@ -9,7 +9,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     UCDNET_PROJECT_ROOT=/app \
     UCDNET_DATA_ROOT=/data/oscd \
-    UCDNET_OUTPUT_DIR=/app/src/data/processed/artifacts
+    UCDNET_OUTPUT_DIR=/app/data/processed/artifacts
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ COPY change_detection_cli ./change_detection_cli
 COPY src ./src
 COPY streamlit_app ./streamlit_app
 
-RUN mkdir -p /app/src/data/processed/artifacts /data/oscd
+RUN mkdir -p /app/data/processed/artifacts /data/oscd
 
 ENTRYPOINT ["poetry", "run", "ucdnet"]
 CMD ["train", "--help"]

@@ -53,7 +53,7 @@ with col5:
                               index=0 if st.session_state.get("normalize", "reflectance") == "reflectance" else 1)
 
 # Output path
-output_dir = Path(st.session_state.get("output_dir", "src/data/processed/artifacts"))
+output_dir = Path(st.session_state.get("output_dir", "data/processed/artifacts"))
 out_path = st.text_input(
     "Output path (.tif)",
     value=str(output_dir / "predictions" / "change_map.tif"),

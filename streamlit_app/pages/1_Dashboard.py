@@ -37,7 +37,7 @@ st.divider()
 # ── Training curves ──────────────────────────────────────────────────────────
 st.subheader("Training Curves")
 ensure_src_on_path()
-output_dir = Path(st.session_state.get("output_dir", "src/data/processed/artifacts"))
+output_dir = Path(st.session_state.get("output_dir", "data/processed/artifacts"))
 
 curves_png = output_dir / "training_curves.png"
 metrics_csv = output_dir / "metrics.csv"

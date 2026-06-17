@@ -16,28 +16,43 @@ Usage:
 """
 
 import os
+
 import numpy as np
 import rasterio
-from rasterio.enums import Resampling
 import tensorflow as tf
+from rasterio.enums import Resampling
 
-#  Sentinel-2 band file names (13 bands) 
+#  Sentinel-2 band file names (13 bands)
 BAND_FILES = [
-    "B01.tif", "B02.tif", "B03.tif", "B04.tif",
-    "B05.tif", "B06.tif", "B07.tif", "B08.tif",
-    "B8A.tif", "B09.tif", "B10.tif", "B11.tif", "B12.tif"
+    "B01.tif",
+    "B02.tif",
+    "B03.tif",
+    "B04.tif",
+    "B05.tif",
+    "B06.tif",
+    "B07.tif",
+    "B08.tif",
+    "B8A.tif",
+    "B09.tif",
+    "B10.tif",
+    "B11.tif",
+    "B12.tif",
 ]
 
 #  Patch parameters
 PATCH_SIZE = 512
-STRIDE     = 64    # step between patch starts (= overlap amount per paper)
+STRIDE = 64  # step between patch starts (= overlap amount per paper)
 
 #  Disk cache directory
 # Patches are stored here on first run and reused on subsequent runs.
-CACHE_DIR  = "patch_cache"
+# Use OUTPUT_DIR env var parent so cache persists with other artifacts.
+# Falls back to "patch_cache" (relative to CWD) when env is unset.
+_OUTPUT_DIR = os.environ.get("UCDNET_OUTPUT_DIR", "")
+CACHE_DIR = os.path.join(_OUTPUT_DIR, "patch_cache") if _OUTPUT_DIR else "patch_cache"
 
 
 #  Low-level image helpers
+
 
 def read_bands(city_dir, subdir="imgs_1_rect", target_h=None, target_w=None):
     """Read all 13 bands, resample to target size, normalise to [0,1]."""
@@ -51,9 +66,7 @@ def read_bands(city_dir, subdir="imgs_1_rect", target_h=None, target_w=None):
     for bfile in BAND_FILES:
         with rasterio.open(os.path.join(band_dir, bfile)) as src:
             data = src.read(
-                1,
-                out_shape=(target_h, target_w),
-                resampling=Resampling.bilinear
+                1, out_shape=(target_h, target_w), resampling=Resampling.bilinear
             ).astype(np.float32)
         bands.append(data)
 
@@ -67,9 +80,7 @@ def read_label(label_dir, city, target_h, target_w):
     cm_path = os.path.join(label_dir, city, "cm", f"{city}-cm.tif")
     with rasterio.open(cm_path) as src:
         label = src.read(
-            1,
-            out_shape=(target_h, target_w),
-            resampling=Resampling.nearest
+            1, out_shape=(target_h, target_w), resampling=Resampling.nearest
         ).astype(np.int32)
     return np.where(label == 2, 1, 0)
 
@@ -80,20 +91,21 @@ def pad_to_patch(img1, img2, label):
     ph = max(0, PATCH_SIZE - H)
     pw = max(0, PATCH_SIZE - W)
     if ph > 0 or pw > 0:
-        img1  = np.pad(img1,  ((0, ph), (0, pw), (0, 0)), mode="reflect")
-        img2  = np.pad(img2,  ((0, ph), (0, pw), (0, 0)), mode="reflect")
-        label = np.pad(label, ((0, ph), (0, pw)),          mode="reflect")
+        img1 = np.pad(img1, ((0, ph), (0, pw), (0, 0)), mode="reflect")
+        img2 = np.pad(img2, ((0, ph), (0, pw), (0, 0)), mode="reflect")
+        label = np.pad(label, ((0, ph), (0, pw)), mode="reflect")
     return img1, img2, label
 
 
 def to_one_hot(label, num_classes=2):
     """(H, W) int → (H, W, C) one-hot float32."""
-    return tf.keras.utils.to_categorical(
-        label, num_classes=num_classes
-    ).astype(np.float32)
+    return tf.keras.utils.to_categorical(label, num_classes=num_classes).astype(
+        np.float32
+    )
 
 
-# Disk-cache helpers 
+# Disk-cache helpers
+
 
 def _patch_paths(idx, cache_dir=CACHE_DIR):
     """Return (t1_path, t2_path, y_path) for patch index idx."""
@@ -101,8 +113,7 @@ def _patch_paths(idx, cache_dir=CACHE_DIR):
     return base + "_t1.npy", base + "_t2.npy", base + "_y.npy"
 
 
-def build_patch_cache(images_root, labels_root, all_cities,
-                      cache_dir=CACHE_DIR):
+def build_patch_cache(images_root, labels_root, all_cities, cache_dir=CACHE_DIR):
     """
     Extract all patches from all cities and save to disk as .npy files.
     Skips extraction if cache already exists (checks for index file).
@@ -128,9 +139,10 @@ def build_patch_cache(images_root, labels_root, all_cities,
         print(f"  Extracting {city} ...", end=" ", flush=True)
         city_dir = os.path.join(images_root, city)
 
-        img1  = read_bands(city_dir, "imgs_1_rect")
-        img2  = read_bands(city_dir, "imgs_2_rect",
-                           target_h=img1.shape[0], target_w=img1.shape[1])
+        img1 = read_bands(city_dir, "imgs_1_rect")
+        img2 = read_bands(
+            city_dir, "imgs_2_rect", target_h=img1.shape[0], target_w=img1.shape[1]
+        )
         H, W, _ = img1.shape
         label = read_label(labels_root, city, H, W)
 
@@ -140,10 +152,10 @@ def build_patch_cache(images_root, labels_root, all_cities,
 
         for y in range(0, H - PATCH_SIZE + 1, STRIDE):
             for x in range(0, W - PATCH_SIZE + 1, STRIDE):
-                t1   = img1 [y:y+PATCH_SIZE, x:x+PATCH_SIZE]   # (512,512,13)
-                t2   = img2 [y:y+PATCH_SIZE, x:x+PATCH_SIZE]
-                lbl  = label[y:y+PATCH_SIZE, x:x+PATCH_SIZE]
-                y_oh = to_one_hot(lbl)                          # (512,512,2)
+                t1 = img1[y : y + PATCH_SIZE, x : x + PATCH_SIZE]  # (512,512,13)
+                t2 = img2[y : y + PATCH_SIZE, x : x + PATCH_SIZE]
+                lbl = label[y : y + PATCH_SIZE, x : x + PATCH_SIZE]
+                y_oh = to_one_hot(lbl)  # (512,512,2)
 
                 p1, p2, py = _patch_paths(patch_idx, cache_dir)
                 np.save(p1, t1)
@@ -151,7 +163,7 @@ def build_patch_cache(images_root, labels_root, all_cities,
                 np.save(py, y_oh)
 
                 patch_idx += 1
-                count     += 1
+                count += 1
 
         print(f"done  ({count} patches)")
 
@@ -163,11 +175,19 @@ def build_patch_cache(images_root, labels_root, all_cities,
     return patch_idx
 
 
-# Main split function 
+# Main split function
 
-def get_split_paths(images_root, labels_root, all_cities,
-                    n_train=200, n_val=57, n_test=30,
-                    seed=42, cache_dir=CACHE_DIR):
+
+def get_split_paths(
+    images_root,
+    labels_root,
+    all_cities,
+    n_train=200,
+    n_val=57,
+    n_test=30,
+    seed=42,
+    cache_dir=CACHE_DIR,
+):
     """
     Paper-correct pipeline:
       1. Build (or reuse) patch cache on disk.
@@ -196,13 +216,15 @@ def get_split_paths(images_root, labels_root, all_cities,
     def to_paths(indices):
         return [_patch_paths(i, cache_dir) for i in indices]
 
-    print(f"  Split → train: {len(tr_idx)} | "
-          f"val: {len(vl_idx)} | test: {len(te_idx)}")
+    print(
+        f"  Split → train: {len(tr_idx)} | " f"val: {len(vl_idx)} | test: {len(te_idx)}"
+    )
 
     return to_paths(tr_idx), to_paths(vl_idx), to_paths(te_idx)
 
 
-# tf.data pipeline 
+# tf.data pipeline
+
 
 def make_dataset(path_tuples, batch_size=1, shuffle=False):
     """
@@ -221,22 +243,22 @@ def make_dataset(path_tuples, batch_size=1, shuffle=False):
     """
     t1_paths = [p[0] for p in path_tuples]
     t2_paths = [p[1] for p in path_tuples]
-    y_paths  = [p[2] for p in path_tuples]
+    y_paths = [p[2] for p in path_tuples]
 
     def load_patch(t1_p, t2_p, y_p):
         t1 = tf.numpy_function(
-            lambda p: np.load(p.decode()).astype(np.float32),
-            [t1_p], tf.float32)
+            lambda p: np.load(p.decode()).astype(np.float32), [t1_p], tf.float32
+        )
         t2 = tf.numpy_function(
-            lambda p: np.load(p.decode()).astype(np.float32),
-            [t2_p], tf.float32)
-        y  = tf.numpy_function(
-            lambda p: np.load(p.decode()).astype(np.float32),
-            [y_p],  tf.float32)
+            lambda p: np.load(p.decode()).astype(np.float32), [t2_p], tf.float32
+        )
+        y = tf.numpy_function(
+            lambda p: np.load(p.decode()).astype(np.float32), [y_p], tf.float32
+        )
 
         t1.set_shape([PATCH_SIZE, PATCH_SIZE, 13])
         t2.set_shape([PATCH_SIZE, PATCH_SIZE, 13])
-        y .set_shape([PATCH_SIZE, PATCH_SIZE, 2])
+        y.set_shape([PATCH_SIZE, PATCH_SIZE, 2])
 
         return {"T1": t1, "T2": t2}, y
 

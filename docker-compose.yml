@@ -4,11 +4,11 @@ services:
     image: change-detection:latest
     profiles: ["cpu"]
     volumes:
-      - ./src/data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
-      - ./src/data/processed/artifacts:/app/src/data/processed/artifacts
+      - ./data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
+      - ./data/processed/artifacts:/app/data/processed/artifacts
     environment:
       UCDNET_DATA_ROOT: /data/oscd
-      UCDNET_OUTPUT_DIR: /app/src/data/processed/artifacts
+      UCDNET_OUTPUT_DIR: /app/data/processed/artifacts
     command: ["train", "--epochs", "30"]
 
   ucdnet-gpu:
@@ -23,11 +23,11 @@ services:
               count: 1
               capabilities: [gpu]
     volumes:
-      - ./src/data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
-      - ./src/data/processed/artifacts:/app/src/data/processed/artifacts
+      - ./data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
+      - ./data/processed/artifacts:/app/data/processed/artifacts
     environment:
       UCDNET_DATA_ROOT: /data/oscd
-      UCDNET_OUTPUT_DIR: /app/src/data/processed/artifacts
+      UCDNET_OUTPUT_DIR: /app/data/processed/artifacts
       NVIDIA_VISIBLE_DEVICES: all
     command: ["train", "--epochs", "30"]
 
@@ -38,11 +38,11 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./src/data/processed/artifacts:/app/src/data/processed/artifacts
-      - ./src/data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
+      - ./data/processed/artifacts:/app/data/processed/artifacts
+      - ./data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
     environment:
       UCDNET_DATA_ROOT: /data/oscd
-      UCDNET_OUTPUT_DIR: /app/src/data/processed/artifacts
+      UCDNET_OUTPUT_DIR: /app/data/processed/artifacts
     entrypoint: ["poetry", "run", "streamlit"]
     command: ["run", "streamlit_app/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
@@ -60,11 +60,11 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./src/data/processed/artifacts:/app/src/data/processed/artifacts
-      - ./src/data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
+      - ./data/processed/artifacts:/app/data/processed/artifacts
+      - ./data/raw/onera-satellite-change-detection-dataset:/data/oscd:ro
     environment:
       UCDNET_DATA_ROOT: /data/oscd
-      UCDNET_OUTPUT_DIR: /app/src/data/processed/artifacts
+      UCDNET_OUTPUT_DIR: /app/data/processed/artifacts
     entrypoint: ["poetry", "run", "streamlit"]
     command: ["run", "streamlit_app/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
@@ -73,17 +73,17 @@ services:
     image: change-detection:latest
     profiles: ["predict"]
     volumes:
-      - ./src/data/processed/artifacts:/app/src/data/processed/artifacts
+      - ./data/processed/artifacts:/app/data/processed/artifacts
       - ./input:/input:ro
     environment:
-      UCDNET_OUTPUT_DIR: /app/src/data/processed/artifacts
+      UCDNET_OUTPUT_DIR: /app/data/processed/artifacts
     entrypoint: ["poetry", "run", "ucdnet", "predict"]
     command:
       - "--model"
-      - "/app/src/data/processed/artifacts/best_model.keras"
+      - "/app/data/processed/artifacts/best_model.keras"
       - "--t1"
       - "/input/t1"
       - "--t2"
       - "/input/t2"
       - "--out"
-      - "/app/src/data/processed/artifacts/predictions/change_map.tif"
+      - "/app/data/processed/artifacts/predictions/change_map.tif"

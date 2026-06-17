@@ -123,7 +123,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_pred.add_argument(
         "--out",
         type=str,
-        default="src/data/processed/artifacts/predictions/change_map.tif",
+        default="data/processed/artifacts/predictions/change_map.tif",
     )
     p_pred.add_argument("--label", type=str, default=None)
     p_pred.add_argument("--patch-size", type=int, default=None)
